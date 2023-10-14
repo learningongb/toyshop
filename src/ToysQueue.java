@@ -8,72 +8,67 @@ import java.util.*;
  */
 public class ToysQueue {
 
-    private List<Integer> indexList = new ArrayList<>();
-    private List<String> nameList = new ArrayList<>();
-    private List<Integer> frequencyList = new ArrayList<>();
-    private int maxValue;
-    private List<Integer> randoms = new ArrayList<>();
-    private HashMap<Integer, Integer> toysResults = new HashMap<>();
-    private int countOfGets;
+    private Queue<Toy> receiving = new ArrayDeque<>();
+    private List<Toy> toyList = new ArrayList<>();
+    private Logger logger;
+
+    public ToysQueue(Logger logger) {
+        this.logger = logger;
+    }
 
     /**
      * Добавляет игрушку к розыгрышу.
      * @param str Строка состоящая из нескольких слов. Первое - идентификатор,
-     *            второе частота выпадения, остальное - наименование.
+     *            второе частота выпадения, третье - количество, остальное - наименование.
      */
-    public void put(String str) {
+    public void put(int id, String name, int frequency, int count) {
 
-        String[] strings = str.split(" ");
-        if (strings.length > 2) {
-            indexList.add(Integer.parseInt(strings[0]));
-            frequencyList.add(Integer.parseInt(strings[1]));
-            nameList.add(String.join(" ", Arrays.copyOfRange(strings, 2, strings.length)));
-            maxValue += frequencyList.get(frequencyList.size() - 1);
-        } else {
-            System.out.println("Строка должна состоять из трех слов");
-        }
+        toyList.add(new Toy(id, name, frequency, count));
+
     }
 
     /**
-     * Получает случайную игрушку с учетом веса вероятности выпадения.
-     * @return Строка из нескольких слов. Первое - идентификатор, остальные - наименование.
-     */
-    public String[] get() {
-        int randomIndex = new Random().nextInt(maxValue);
-        randoms.add(randomIndex);
-        int i;
-        for (i = 0; i < frequencyList.size(); i++) {
-            if (randomIndex < frequencyList.get(i))
-                break;
-            randomIndex -= frequencyList.get(i);
-        }
-        toysResults.put(i, toysResults.getOrDefault(i, 0) + 1);
-        String[] result = new String[2];
-        result[0] = indexList.get(i).toString();
-        result[1] = nameList.get(i);
-        countOfGets++;
-        return result;
-    }
-
-    /**
-     * Получить статистику выполнения: все выброшенные случайные числа и процент выданных игрушек каждого вида.
+     * Выбирает случайноую игрушку и добавляет ее в очередь к выдаче
      * @return
      */
-    public String getStatistic() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Случайные числа: " + Arrays.toString(randoms.toArray()) + "\n");
-        for (Integer key : toysResults.keySet()) {
-            sb.append(nameList.get(key) + " " + (100 * toysResults.get(key) / countOfGets) + "%\n");
+    public void get() {
+        int randomIndex = new Random().nextInt(getMaxValue());
+        for (Toy toy : toyList) {
+            if (toy.getCount() != 0) {
+                if (randomIndex < toy.getFrequency()) {
+                    receiving.add(toy);
+                    toy.decrementCount();
+                    break;
+                }
+                randomIndex -= toy.getFrequency();
+            }
         }
-        return sb.toString();
     }
 
     /**
-     * Очищает данные статистки перед очередным розыгрышем.
+     * Выдает одну игрушку и пишет событие в лог.
+     * @return
      */
-    public void clearStatistic() {
-        countOfGets = 0;
-        randoms = new ArrayList<>();
-        toysResults = new HashMap<>();
+    public Toy receiveToy() {
+        Toy toy = receiving.poll();
+        logger.log(toy.toString());
+        return toy;
+    }
+
+    /**
+     * Проверяет есть ли в очереди игрушки к выдаче.
+     * @return
+     */
+    public boolean hasReceiving() {
+        return !receiving.isEmpty();
+    }
+
+    private int getMaxValue() {
+        int result = 0;
+        for (Toy toy : toyList) {
+            if (toy.getCount() > 0)
+                result += toy.getFrequency();
+        }
+        return result;
     }
 }
